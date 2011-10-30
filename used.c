@@ -1,74 +1,62 @@
 #include <stdio.h>
-#define MAXLINE 1000
+
+#ifndef _CPLUSPLUS
+  typedef int bool;
+#define true 1
+#define false 0
+#endif
+
+int getch(void); /* чтение символов с преобразованием */
+void uSED(void); /* micro stream editor */
 
 main()
 {
-	void uSED(void); /* micro stream editor */
-
 	uSED();
 	return 0;
 }
 
-
-extern int reg; /* reg используется ниже в getch() */
-#define ungetch(c) reg = c /* возврат символа в поток ввода*/
-
 void uSED(void)
 {
-	int getch(void);
-
-	int nlch = 0; /* newline character */
-	int c, nc; /* i. e. next char */
 	
+	int nlch = 0; /* newline character */
+	int c;
+	bool lastspace=false;
 	while (isspace(c = getch()) && c != EOF) /*пропускаем первые "белые" символы*/
 		;
-	ungetch(c);
+	ungetc(c,stdin);
 	
 	while ((c = getch()) != EOF) {
-		if (!isspace(c)) {
-			/* проверка на случай "<>" */
-			if (c == '<') { 
-				if ((nc = getch()) == '>') {
-					putchar('\n'), putchar('\n');
-					continue;
-				}
-				else {
-					putchar(c);
-					ungetch(nc);
-					continue;
-				}
-			}
-			/* обычная обработка непустых символов */
-			putchar(c);
-			continue;
-		}
-		/* обработка "белых" символов */
-		while (isspace(c = getch()) && c != EOF) {
-			if (c == '\n') 
-				nlch++;
-		}
-		ungetch(c);
-		if (nlch > 1 || c == EOF) {
-			putchar('\n'), putchar ('\n');
-			nlch = 0;
-		}
-		else 
-			putchar(' ');
-	}
+          switch(c) {
+            case '\n':
+              nlch++;
+            case ' ':
+              lastspace=true;
+              break;
+            case EOF:
+              putchar('\n');
+              break;
+            default:
+              if(lastspace)
+                putchar(nlch>1?'\n':' ');
+              putchar(c);
+              lastspace=false;
+              nlch=0;
+              break;
+          }
+        }
 	/* не забываем про последний символ :)*/
-//<	putchar(EOF);
+//<	putchar(EOF); здесь будет напечатано '\0xff'. Для закрытия потока используют fclose(file)
 }
-
-#define EMPTY -2 /* т.е. ПУСТ. Состояние регистра reg. */ 
-int reg = EMPTY; /* регистр, который эмулирует возврат символа в поток ввода */
 
 int getch(void)
 {
-	if (reg != EMPTY) {
-		int x = reg;
-		reg = EMPTY;
-
-		return x;
-	}
-	return getchar();
+  int c,nc;
+  if((c=getchar())=='<')
+    if((nc=getchar())=='>') {
+      ungetc('\n',stdin);
+      return '\n';
+    }
+    else ungetc(nc,stdin);
+  if(isspace(c) && c!='\n') c=' ';
+  return c;
 }
